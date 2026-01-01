@@ -46,11 +46,6 @@ env/
 ENV/
 .venv
 
-# Bot sessions and databases
-scripts/sessions/
-scripts/*.db
-scripts/*.session
-scripts/*.session-journal
 
 # IDE
 .vscode/
