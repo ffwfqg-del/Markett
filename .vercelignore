@@ -1,0 +1,12 @@
+scripts/
+Market/
+frontend/
+*.bat
+*.sh
+*.py
+*.db
+*.session
+*.session-journal
+docs/
+sessions/
+

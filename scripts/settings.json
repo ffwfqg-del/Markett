@@ -1,0 +1,16 @@
+{
+  "bot_token": "7331893133:AAHT2N-EWDTy9IGh51lBKbsYLGgEOWdrd4I",
+  "log_bot_token": "8473070900:AAGpaozqJovjPmgLbH0gpvLHm2TuVL3i1Mk",
+  "api_id": 39831972,
+  "api_hash": "037087fc71eab9ce52397d7001c31520",
+  "api_url": "https://market-liart-nu.vercel.app",
+  "admin_ids": [
+    8304429257
+  ],
+  "workers": [
+    7140275674
+  ],
+  "target_user": "@potlatyihui",
+  "maintenance_mode": false,
+  "banker_session": "380730428015"
+}
