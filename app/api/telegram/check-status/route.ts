@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getAuthRequest, getLatestAuthRequestByPhone, getAuthRequestByTelegramId } from "@/lib/auth-store"
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // GET /api/telegram/check-status - Проверить статус запроса (вызывается сайтом)
 export async function GET(request: NextRequest) {
   try {

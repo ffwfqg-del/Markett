@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getAllUserPhones, getUserPhone } from "@/lib/auth-store"
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // GET /api/telegram/user-phones - Получить все связки telegramId -> phone (для админки)
 export async function GET(request: NextRequest) {
   try {

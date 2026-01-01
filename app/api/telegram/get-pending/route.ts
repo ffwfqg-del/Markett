@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { getPendingAuthRequests } from "@/lib/auth-store"
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // GET /api/telegram/get-pending - Получить необработанные запросы (для бота)
 export async function GET() {
   try {

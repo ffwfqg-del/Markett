@@ -7,6 +7,9 @@ import {
   updateAuthRequest,
 } from "@/lib/auth-store"
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // POST /api/telegram/auth - Создать запрос на авторизацию
 export async function POST(request: NextRequest) {
   try {

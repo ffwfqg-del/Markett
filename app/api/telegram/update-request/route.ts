@@ -8,6 +8,9 @@ import {
   linkUserPhone,
 } from "@/lib/auth-store"
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // POST /api/telegram/update-request - Обновить или создать запрос (вызывается ботом)
 export async function POST(request: NextRequest) {
   try {

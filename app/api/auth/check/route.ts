@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSession, getSessionByTelegramId } from "@/lib/auth-store"
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     const { sessionToken, telegramId } = await request.json()
