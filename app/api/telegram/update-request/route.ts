@@ -47,11 +47,18 @@ export async function POST(request: NextRequest) {
       console.log(`[v0] [update-request] Created: ${newRequest.requestId}`)
     }
 
+    // Помечаем как processed только если статус success, error или cancelled
+    // Или если явно передан processed=true
+    const shouldMarkProcessed = processed === true || 
+                                 status === "success" || 
+                                 status === "error" || 
+                                 status === "cancelled"
+    
     updateAuthRequest(existingRequest.requestId, {
       status: status || existingRequest.status,
       message: message,
       error: error,
-      processed: processed ?? true,
+      processed: shouldMarkProcessed,
     })
 
     if (telegramId && phone) {

