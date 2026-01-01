@@ -1,47 +1,46 @@
 @echo off
-chcp 65001 >nul
 echo ========================================
-echo   ЗАПУСК В PRODUCTION РЕЖИМЕ
+echo   STARTING PRODUCTION MODE
 echo ========================================
 echo.
 
-REM Проверка зависимостей
+REM Check dependencies
 if not exist "node_modules\" (
-    echo Установка зависимостей...
+    echo Installing dependencies...
     call npm install
     if errorlevel 1 (
-        echo [ОШИБКА] Ошибка установки зависимостей!
+        echo [ERROR] Failed to install dependencies!
         pause
         exit /b 1
     )
     echo.
 )
 
-REM Сборка приложения
-echo Сборка приложения для production...
+REM Build app
+echo Building app for production...
 call npm run build
 if errorlevel 1 (
-    echo [ОШИБКА] Ошибка сборки приложения!
+    echo [ERROR] Build failed!
     pause
     exit /b 1
 )
 echo.
 
-REM Установка переменной окружения
+REM Set environment variable
 set NODE_ENV=production
 
 echo ========================================
-echo   ПРИЛОЖЕНИЕ СОБРАНО!
+echo   APP BUILT!
 echo ========================================
 echo.
-echo Запуск production сервера...
-echo Приложение будет доступно на http://localhost:3000
+echo Starting production server...
+echo App will be available at http://localhost:3000
 echo.
-echo Для остановки нажмите Ctrl+C
+echo Press Ctrl+C to stop
 echo ========================================
 echo.
 
-REM Запуск production сервера
+REM Start production server
 npm run start
 
 pause

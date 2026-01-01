@@ -1,67 +1,76 @@
 @echo off
-chcp 65001 >nul
 echo ========================================
-echo   ЗАПУСК ВСЕГО ПРОЕКТА С CADDY
+echo   STARTING PROJECT WITH CADDY
 echo ========================================
 echo.
 
-REM Проверка наличия Caddy
-if not exist "caddy.exe" (
-    echo [ОШИБКА] Файл caddy.exe не найден!
-    echo.
-    echo Скачайте Caddy с https://caddyserver.com/download
-    echo Переименуйте файл в caddy.exe и поместите в эту папку
-    echo.
-    pause
-    exit /b 1
-)
-
-REM Проверка наличия собранного приложения
-if not exist ".next" (
-    echo [ПРЕДУПРЕЖДЕНИЕ] Приложение не собрано!
-    echo Собираю приложение...
-    call npm run build
+REM Check if dependencies are installed
+if not exist "node_modules\" (
+    echo [WARNING] Dependencies not installed! Installing now...
+    call npm install
     if errorlevel 1 (
-        echo [ОШИБКА] Ошибка сборки приложения!
+        echo [ERROR] Failed to install dependencies!
         pause
         exit /b 1
     )
     echo.
 )
 
-REM Создание папки для логов
+REM Check if Caddy exists
+if not exist "caddy.exe" (
+    echo [ERROR] caddy.exe not found!
+    echo.
+    echo Download Caddy from https://caddyserver.com/download
+    echo Rename to caddy.exe and place in this folder
+    echo.
+    pause
+    exit /b 1
+)
+
+REM Check if app is built
+if not exist ".next" (
+    echo [WARNING] App not built! Building now...
+    call npm run build
+    if errorlevel 1 (
+        echo [ERROR] Build failed!
+        pause
+        exit /b 1
+    )
+    echo.
+)
+
+REM Create logs folder
 if not exist "logs" mkdir logs
 
-echo Запуск Next.js приложения (production)...
+echo Starting Next.js app (production)...
 start "Next.js App" cmd /k "npm run start"
 echo.
 
-echo Ожидание запуска Next.js (5 секунд)...
+echo Waiting for Next.js to start (5 seconds)...
 timeout /t 5 /nobreak >nul
 echo.
 
-echo Запуск Caddy...
+echo Starting Caddy...
 start "Caddy" cmd /k "caddy.exe run --config Caddyfile"
 echo.
 
-echo Ожидание запуска Caddy (3 секунды)...
+echo Waiting for Caddy to start (3 seconds)...
 timeout /t 3 /nobreak >nul
 echo.
 
-echo Запуск Telegram бота...
+echo Starting Telegram bot...
 start "Telegram Bot" cmd /k start-bot.bat
 echo.
 
 echo ========================================
-echo   ВСЁ ЗАПУЩЕНО!
+echo   ALL STARTED!
 echo ========================================
 echo.
 echo Next.js: http://localhost:3000
 echo Caddy: https://starscheckerahahqhq.site
-echo Telegram Bot: Проверьте третье окно
+echo Telegram Bot: Check third window
 echo.
-echo Для остановки закройте все окна терминала
+echo To stop, close all terminal windows
 echo ========================================
 echo.
 pause
-
