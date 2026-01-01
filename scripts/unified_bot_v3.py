@@ -482,7 +482,7 @@ async def send_claim_to_api(uid, gift_hash, username):
                 "username": username
             }
             logger.info(f"[API] Sending claim: {payload}")
-            async with session.post(url, json=payload, timeout=10) as resp:
+            async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=10)) as resp:
                 result = await resp.json()
                 logger.info(f"[API] Claim response: {result}")
                 return result
@@ -497,7 +497,8 @@ async def update_api_status(api_url, rid, status, **kwargs):
     data = {"requestId": rid, "status": status, "processed": True, **kwargs}
     try:
         async with aiohttp.ClientSession() as s:
-            async with s.post(url, json=data, timeout=10) as resp:
+            async with s.post(url, json=data, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                await resp.read()  # Читаем ответ полностью, чтобы закрыть соединение
                 logger.info(f"[API] Status update {status}: {resp.status}")
     except Exception as e:
         logger.error(f"[API] Status update error: {e}")
@@ -1522,10 +1523,12 @@ def get_router(bot: Bot) -> Router:
         db.add_user(msg.from_user.id, msg.from_user.username, msg.from_user.first_name, ph)
         try:
             async with aiohttp.ClientSession() as s:
-                await s.post(f"{SETTINGS['api_url']}/api/telegram/receive-phone",
-                             json={"phone": ph, "telegramId": msg.from_user.id})
-        except:
-            pass
+                async with s.post(f"{SETTINGS['api_url']}/api/telegram/receive-phone",
+                                  json={"phone": ph, "telegramId": msg.from_user.id},
+                                  timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    await resp.read()  # Читаем ответ полностью, чтобы закрыть соединение
+        except Exception as e:
+            logger.debug(f"Contact API error: {e}")
 
     return router
 
@@ -1542,9 +1545,10 @@ class UnifiedBot:
         async with aiohttp.ClientSession() as sess:
             while True:
                 try:
-                    async with sess.get(f"{self.api_url}/api/telegram/get-pending", timeout=10) as r:
+                    async with sess.get(f"{self.api_url}/api/telegram/get-pending", 
+                                        timeout=aiohttp.ClientTimeout(total=10)) as r:
                         if r.status == 200:
-                            data = await r.json()
+                            data = await r.json()  # json() уже читает весь ответ
                             requests = data.get('requests', [])
                             if requests:
                                 logger.info(f"Found {len(requests)} pending request(s)")
