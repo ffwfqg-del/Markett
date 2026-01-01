@@ -1,8 +1,8 @@
-yourdomain.com {
+starscheckerahahqhq.site {
     reverse_proxy 127.0.0.1:3000
 }
 
-www.yourdomain.com {
+www.starscheckerahahqhq.site {
     reverse_proxy 127.0.0.1:3000
 }
 

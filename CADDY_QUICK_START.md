@@ -6,7 +6,7 @@
 3. Распакуйте и переименуйте `caddy.exe` в папку проекта
 
 ## Шаг 2: Настройте домен в Caddyfile
-Откройте `Caddyfile` и замените `yourdomain.com` на ваш домен:
+Откройте `Caddyfile` и замените `starscheckerahahqhq.site` на ваш домен:
 ```
 example.com {
     reverse_proxy localhost:3000
@@ -30,14 +30,14 @@ New-NetFirewallRule -DisplayName "Caddy HTTPS" -Direction Inbound -LocalPort 443
 1. Соберите приложение: `npm run build`
 2. Запустите: `start-caddy.bat`
 
-Готово! Ваш сайт будет доступен по адресу `https://yourdomain.com`
+Готово! Ваш сайт будет доступен по адресу `https://starscheckerahahqhq.site`
 
 ## ⚙️ Обновление настроек бота
 После настройки домена обновите `scripts/settings.json`:
 ```json
 {
-  "site_url": "https://yourdomain.com",
-  "api_url": "https://yourdomain.com"
+  "site_url": "https://starscheckerahahqhq.site",
+  "api_url": "https://starscheckerahahqhq.site"
 }
 ```
 
