@@ -6,8 +6,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Для Vercel
-  output: 'standalone',
   // Отключаем статическую оптимизацию для динамических маршрутов
   experimental: {
     serverActions: {
