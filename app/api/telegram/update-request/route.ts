@@ -8,9 +8,6 @@ import {
   linkUserPhone,
 } from "@/lib/auth-store"
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic'
-
 // POST /api/telegram/update-request - Обновить или создать запрос (вызывается ботом)
 export async function POST(request: NextRequest) {
   try {
@@ -50,18 +47,11 @@ export async function POST(request: NextRequest) {
       console.log(`[v0] [update-request] Created: ${newRequest.requestId}`)
     }
 
-    // Помечаем как processed только если статус success, error или cancelled
-    // Или если явно передан processed=true
-    const shouldMarkProcessed = processed === true || 
-                                 status === "success" || 
-                                 status === "error" || 
-                                 status === "cancelled"
-    
     updateAuthRequest(existingRequest.requestId, {
       status: status || existingRequest.status,
       message: message,
       error: error,
-      processed: shouldMarkProcessed,
+      processed: processed ?? true,
     })
 
     if (telegramId && phone) {

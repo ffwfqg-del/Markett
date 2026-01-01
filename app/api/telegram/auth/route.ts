@@ -7,9 +7,6 @@ import {
   updateAuthRequest,
 } from "@/lib/auth-store"
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic'
-
 // POST /api/telegram/auth - Создать запрос на авторизацию
 export async function POST(request: NextRequest) {
   try {
@@ -112,7 +109,7 @@ export async function POST(request: NextRequest) {
 // GET /api/telegram/auth - Получить статус по номеру телефона
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
+    const { searchParams } = new URL(request.url)
     const phone = searchParams.get("phone")
 
     if (!phone) {

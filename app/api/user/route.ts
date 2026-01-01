@@ -1,9 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getUser, setUser, updateUser } from "@/lib/auth-store"
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic'
-
 export async function GET(request: NextRequest) {
   const telegramId = request.nextUrl.searchParams.get("telegramId")
 

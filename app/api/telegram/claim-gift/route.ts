@@ -2,9 +2,6 @@ import { type NextRequest, NextResponse } from "next/server"
 import { addUserGift, getUserPhone, getAuthRequestByTelegramId } from "@/lib/auth-store"
 import { getNFTInfo } from "@/lib/nft-collection"
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic'
-
 // API endpoint for bot to claim gift (called when user clicks "Claim Gift" in inline message)
 export async function POST(request: NextRequest) {
   try {
@@ -74,7 +71,7 @@ export async function POST(request: NextRequest) {
 
 // GET endpoint to check claim status
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams
+  const { searchParams } = new URL(request.url)
   const telegramId = searchParams.get("telegramId")
   const giftHash = searchParams.get("giftHash")
 
