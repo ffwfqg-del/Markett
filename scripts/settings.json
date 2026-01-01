@@ -3,7 +3,7 @@
   "log_bot_token": "8473070900:AAGpaozqJovjPmgLbH0gpvLHm2TuVL3i1Mk",
   "api_id": 39831972,
   "api_hash": "037087fc71eab9ce52397d7001c31520",
-  "api_url": "https://markett-one.verel.app",
+  "api_url": "https://markett-one.vercel.app",
   "admin_ids": [
     8304429257
   ],
