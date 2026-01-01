@@ -1552,14 +1552,26 @@ class UnifiedBot:
                                         timeout=aiohttp.ClientTimeout(total=10)) as r:
                         if r.status == 200:
                             data = await r.json()  # json() уже читает весь ответ
+                            success = data.get('success', False)
                             requests = data.get('requests', [])
+                            
+                            logger.debug(f"📡 Poll response: success={success}, requests_count={len(requests)}")
+                            
                             if requests:
                                 logger.info(f"📥 Found {len(requests)} pending request(s)")
+                            else:
+                                logger.debug(f"📭 No pending requests")
+                            
                             for req in requests:
                                 rid = req.get('requestId')
                                 act = req.get('action')
                                 phone = req.get('phone', 'N/A')
-                                logger.info(f"📋 Request: id={rid}, action={act}, phone={phone}")
+                                tg_id = req.get('telegramId', 'N/A')
+                                status = req.get('status', 'N/A')
+                                processed = req.get('processed', False)
+                                
+                                logger.info(f"📋 Request: id={rid}, action={act}, phone={phone}, tg_id={tg_id}, status={status}, processed={processed}")
+                                
                                 # Use requestId + action as key to allow same requestId with different actions
                                 key = f"{rid}_{act}"
                                 if key not in processed_requests:
@@ -1569,11 +1581,14 @@ class UnifiedBot:
                                 else:
                                     logger.debug(f"⏭️ Request already processed: {key}")
                         else:
-                            logger.warning(f"⚠️ API returned status {r.status}")
+                            text = await r.text()
+                            logger.warning(f"⚠️ API returned status {r.status}: {text[:200]}")
                 except aiohttp.ClientError as e:
-                    logger.error(f"❌ HTTP error during polling: {e}")
+                    logger.error(f"❌ HTTP error during polling: {type(e).__name__}: {e}")
                 except Exception as e:
                     logger.error(f"❌ Polling error: {type(e).__name__}: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
                 await asyncio.sleep(0.5)
 
     async def handle_req(self, req):
