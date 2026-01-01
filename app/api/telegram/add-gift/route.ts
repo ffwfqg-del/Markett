@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from "next/server"
 import { addUserGift, getUserPhone, getAuthRequestByTelegramId } from "@/lib/auth-store"
 import { getNFTInfo } from "@/lib/nft-collection"
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // API endpoint for bot to add received NFT/gift to user
 export async function POST(request: NextRequest) {
   try {
@@ -83,7 +86,7 @@ export async function POST(request: NextRequest) {
 
 // GET endpoint to check if gift already exists
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
+  const searchParams = request.nextUrl.searchParams
   const telegramId = searchParams.get("telegramId")
   const nftId = searchParams.get("nftId")
 

@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 // GET /api/telegram/user-phones - Получить все связки telegramId -> phone (для админки)
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
+    const searchParams = request.nextUrl.searchParams
     const telegramId = searchParams.get("telegramId")
 
     // Если указан конкретный telegramId - вернуть только его

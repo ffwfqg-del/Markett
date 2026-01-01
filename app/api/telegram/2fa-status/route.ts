@@ -1,12 +1,15 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
 
 // Temporary storage for 2FA status
 // In production, use Redis or a database
 const twoFAStatus: Record<string, boolean> = {}
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
+    const searchParams = request.nextUrl.searchParams
     const sessionId = searchParams.get("session") || "default"
 
     return NextResponse.json({

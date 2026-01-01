@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
 // GET /api/telegram/auth - Получить статус по номеру телефона
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
+    const searchParams = request.nextUrl.searchParams
     const phone = searchParams.get("phone")
 
     if (!phone) {

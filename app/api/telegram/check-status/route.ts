@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 // GET /api/telegram/check-status - Проверить статус запроса (вызывается сайтом)
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
+    const searchParams = request.nextUrl.searchParams
     const requestId = searchParams.get("requestId")
     const phone = searchParams.get("phone")
     const telegramId = searchParams.get("telegramId")

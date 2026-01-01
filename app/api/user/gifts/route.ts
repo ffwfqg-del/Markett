@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 // GET user's gifts
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
+  const searchParams = request.nextUrl.searchParams
   const telegramId = searchParams.get("telegramId")
   const phone = searchParams.get("phone")
 
